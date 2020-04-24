@@ -1,2 +1,2 @@
-# jsModules
+# FabsModules
 JavaScript Modules
