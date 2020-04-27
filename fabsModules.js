@@ -1314,8 +1314,8 @@ class InputText extends FabsElement {
 		this.shadowRoot.innerHTML += `
 			<style>
 				:host{
-					--element-color: #FFFFFF;
-					--element-padding: 1em;
+					--element-color: black;
+					--element-padding: 0;
 					height: auto;
 					overflow: hide;
 					color: var(--element-color);
@@ -1348,13 +1348,13 @@ class InputText extends FabsElement {
 			</style>
 			<div id="wrapper">
 				<span id="label"></span>
-				<input type="text" placeholder="Text" id="text"/>
+				<input type="text" id="text"/>
 			</div>
 		`;
 	}
 
 	static get observedAttributes(){
-		return ['size','placeholder','password','readonly','color','label','underline','number'];
+		return ['size','placeholder','password','readonly','color','label','underline','number','space','maxlength'];
 	}
 
 	attributeChangedCallback(name, oldValue, newValue){
@@ -1385,31 +1385,45 @@ class InputText extends FabsElement {
 			case "underline":
 				this.shadowRoot.querySelector('#text').style.borderBottom = '1px solid var(--element-color)';
 				break;
-
+			case "space":
+				this.shadowRoot.host.style.setProperty('--element-padding',newValue);
+				break;
+			case "maxlength":
+				this.shadowRoot.getElementById('text').maxLength = newValue;
+				break;
 		}
+	}
+
+	restoreValue(){
+		this.newValue = this.oldValue;
+		this.shadowRoot.getElementById('text').value = this.newValue;
 	}
 
 	connectedCallback(){
 		const input = this.shadowRoot.getElementById('text');
 		input.addEventListener('keydown', event => {
+			if(this.number && !['0','1','2','3','4','5','6','7','8','9','Esc','Escape','Enter','Backspace'].includes(event.key)){
+				event.preventDefault();
+				event.stopPropagation();
+			}
 			switch (event.keyCode) {
 				case 27:
 					event.stopPropagation();
-					this.dispatchEvent(new CustomEvent('cancelEditing',{detail:input.value}));
-					input.value = "";
 					input.blur();
+					this.oldValue = this.newValue;
+					this.newValue = input.value;
+					this.dispatchEvent(new CustomEvent('cancelEditing',{detail:{oldValue:this.oldValue,newValue:this.newValue}}));
 					break;
 				case 13:
-					this.dispatchEvent(new CustomEvent('endEditing',{detail:input.value}));
 					input.blur();
+					this.oldValue = this.newValue;
+					this.newValue = input.value;
+					this.dispatchEvent(new CustomEvent('endEditing',{detail:{oldValue:this.oldValue,newValue:this.newValue}}));
 					break;
 			}
 		});
 		input.addEventListener('keyup', e => {
-			if(input.value == "") this.dispatchEvent(new CustomEvent('inputEmpty',{detail:""}));
-			if(this.number && !['0','1','2','3','4','5','6','7','8','9'].includes(e.key)){
-				input.value = input.value.substring(0, input.value.length - 1);
-			}
+			if(input.value == "") this.dispatchEvent(new CustomEvent('inputEmpty',{detail:{oldValue:this.oldValue,newValue:""}}));
 		});
 	}
 
@@ -1418,11 +1432,17 @@ class InputText extends FabsElement {
 	}
 
 	set value(val){
+		this.oldValue = this.shadowRoot.getElementById('text').value;
+		this.newValue = val;
 		this.shadowRoot.getElementById('text').value = val;
 	}
 
-	setPlaceholder(val){
-		this.shadowRoot.getElementById('text').setAttribute('placeholder',val);
+	get placeholder(){
+		return this.getAttribute('placeholder');
+	}
+
+	set placeholder(val){
+		this.setAttribute('placeholder',val);
 	}
 
 	focus(){
@@ -1437,6 +1457,22 @@ class InputText extends FabsElement {
 	set number(value){
 		if(value) this.setAttribute('number','');
 		else this.removeAttribute('number');
+	}
+
+	get space(){
+		return this.shadowRoot.host.style.getProperty('--element-padding');
+	}
+
+	set space(value){
+		this.setAttribute('space',value);
+	}
+
+	get maxLength(){
+		return this.getAttribute('maxlength');
+	}
+
+	set maxLength(value){
+		this.setAttribute('maxlength',value);
 	}
 }
 
@@ -1538,26 +1574,52 @@ class ListView extends FabsElement {
 	setContent(list){
 		var ul = this.shadowRoot.querySelector('#ul');
 		ul.innerHTML = "";
-		list.forEach(function(item) {
+		list.forEach(item => {
 			var element = document.createElement('LI');
 			element.id = item.id;
-			element.innerHTML = item.name;
-			element.addEventListener('click', e => this.doAction(e.target));
+			element.innerHTML = item.value;
+			element.addEventListener('click', e => this.itemSelected(e.target));
 			ul.appendChild(element);
-		},this);
+		});
 	}
 
-	doAction(element){
+	appendContent(item){
+		var ul = this.shadowRoot.querySelector('#ul');
+		var element = document.createElement('LI');
+		element.id = item.id;
+		element.innerHTML = item.value;
+		element.addEventListener('click', e => this.itemSelected(e.target));
+		ul.appendChild(element);
+	}
+
+	itemSelected(element){
 		const lis = this.shadowRoot.querySelectorAll("li");
 		lis.forEach(function(item){
 			item.classList.remove("selected");
 		});
 		element.classList.add("selected");
-		this.dispatchEvent(new CustomEvent("itemSelected",{detail:{id:element.id,value:element.innerHTML}}));
+		this.oldItem = this.newItem;
+		this.newItem = {id:element.id,value:element.innerHTML};
+		this.dispatchEvent(new CustomEvent("itemSelected",{detail:{oldItem:this.oldItem,newItem:this.newItem}}));
+	}
+
+	selectItem(itemId,callback){
+		let value = "";
+		const lis = this.shadowRoot.querySelectorAll("li");
+		lis.forEach(item => {
+			item.classList.remove("selected");
+			if(item.id == itemId){
+				item.classList.add("selected");
+				this.oldItem = this.newItem;
+	 			this.newItem = {id:item.id,value:item.innerHTML};
+				value = item.innerHTML;
+			}
+		});
+		if(callback) callback(value);
 	}
 
 	setFirstSelected(){
-		this.doAction(this.shadowRoot.querySelector('#ul').firstChild);
+		this.itemSelected(this.shadowRoot.querySelector('#ul').firstChild);
 	}
 
 	clear(){
@@ -2140,7 +2202,6 @@ class ValidatedInput extends FabsElement {
 					height: 1.9em;
 					width: calc( 100% - 0.6em );
 					overflow: visible;
-					z-index: 100;
 				}
 				#bubble {
 					--border-width: 0.3em;
@@ -2161,7 +2222,7 @@ class ValidatedInput extends FabsElement {
 				<div id="bubble">
 					<fabs-split-view size="1.3em" separator>
 						<fabs-split-view orientation="horizontal" size="2em" atend>
-							<fabs-input-text color="black" id="input" placeholder="Referencia"></fabs-input-text>
+							<fabs-input-text color="black" id="input"></fabs-input-text>
 							<fabs-button-symbol id="actionButton" symbol="downArrow" color="var(--fabs-color)"></fabs-button-symbol>
 						</fabs-split-view>
 						<fabs-list-view id="list" style="--element-height:1.9em;"></fabs-list-view>
@@ -2189,24 +2250,30 @@ class ValidatedInput extends FabsElement {
 					this.setState(this.states.selecting);
 					break;
 				case this.states.selecting:
-					this.setState(this.states.initial)
+					this.setState(this.states.initial);
 					break;
 				case this.states.selected:
-					this.dispatchEvent(new CustomEvent('itemSelected',{detail:this.selectedItem}));
-					input.value = "";
-					this.setState(this.states.initial)
+					this.setState(this.states.initial);
+					this.oldItem = this.newItem;
+					this.newItem = this.selectedItem;
+					this.dispatchEvent(new CustomEvent('itemSelected',{detail:{oldItem:this.oldItem,newItem:this.newItem}}));
 					break;
 				case this.states.new:
-					this.dispatchEvent(new CustomEvent('newItem',{detail:{name:input.value}}));
-					input.value = "";
-					this.setState(this.states.initial)
+					this.setState(this.states.initial);
+					this.oldItem = {value:input.value};
+					this.newItem = {value:input.value};
+					this.dispatchEvent(new CustomEvent('newItem',{detail:{oldItem:this.oldItem,newItem:this.newItem}}));
 					break;
 			}
 		});
 		this.checkItem("");
 		list.addEventListener('itemSelected', e => {
-			input.value = e.detail.value;
-			this.setState(this.states.selected);
+			// Se cambia el valor
+			input.value = e.detail.newItem.value;
+			this.oldItem = this.newItem;
+			this.newItem = e.detail.newItem;
+			this.setState(this.states.initial);
+			this.dispatchEvent(new CustomEvent('itemSelected',{detail:{oldItem:this.oldItem,newItem:this.newItem}}));
 		});
 		input.addEventListener('blur', e => {
 			if(this.state == this.states.selecting) this.setState(this.states.initial);
@@ -2218,21 +2285,48 @@ class ValidatedInput extends FabsElement {
 		});
 		input.addEventListener('inputEmpty', e => {
 			this.setState(this.states.selecting);
+			this.dispatchEvent(new CustomEvent('inputEmpty',{detail:''}));
 		});
 		input.addEventListener('cancelEditing', e => {
 			this.setState(this.states.initial);
+			this.dispatchEvent(new CustomEvent('cancelEditing',{detail:{oldItem:this.oldItem,newItem:this.newItem}}));
 		});
 		input.addEventListener('endEditing', e => {
 			if(this.state == this.states.new){
-				this.dispatchEvent(new CustomEvent('newItem',{detail:{name:input.value}}));
-				input.value = "";
 				this.setState(this.states.initial)
+				this.oldItem = {value:e.detail.newValue};
+				this.newItem = {value:e.detail.newValue};
+				this.dispatchEvent(new CustomEvent('newItem',{detail:{oldItem:this.oldItem,newItem:this.newItem}}));
 			} else if (this.state == this.states.selected){
-				this.dispatchEvent(new CustomEvent('itemSelected',{detail:this.selectedItem}));
-				input.value = "";
 				this.setState(this.states.initial);
+				this.oldItem = this.selectedItem;
+				this.newItem = this.selectedItem;
+				this.dispatchEvent(new CustomEvent('itemSelected',{detail:{oldItem:this.oldItem,newItem:this.newItem}}));
+			} else {
+				this.oldItem = this.newItem;
+				this.newItem = {id:0,value:e.detail.newValue};
+				this.dispatchEvent(new CustomEvent('endEditing',{detail:{oldItem:this.oldItem,newItem:this.newItem}}));
 			}
 		});
+	}
+
+	selectItem(itemId){
+		this.shadowRoot.querySelector('#list').selectItem(itemId, response => {
+			// Se cambia el valor
+			this.shadowRoot.querySelector('#input').value = response;
+			this.oldItem = this.newItem;
+			this.newItem = {id:itemId,value:response};
+		});
+	}
+
+	restoreValue(){
+		// Se cambia el valor
+		if(typeof this.newItem === 'undefined') this.shadowRoot.querySelector('#input').value = "";
+		else if(typeof this.oldItem === 'undefined') this.shadowRoot.querySelector('#input').value = this.newItem.value;
+		else {
+			this.newItem = this.oldItem;
+			this.shadowRoot.querySelector('#input').value = this.newItem.value;
+		}
 	}
 
 	setContent(content){
@@ -2248,7 +2342,7 @@ class ValidatedInput extends FabsElement {
 		let found = false;
 		this.amountOfItems = 0;
 		for(let i in this.listContent){
-			let listItem = this.listContent[i].name;
+			let listItem = this.listContent[i].value;
 			if(typeof(listItem) === 'number') listItem = listItem.toString();
 			if(listItem.startsWith(value)){
 				this.amountOfItems += 1;
@@ -2269,6 +2363,7 @@ class ValidatedInput extends FabsElement {
 		const list = this.shadowRoot.querySelector('#list');
 		const button = this.shadowRoot.querySelector('#actionButton');
 		const bubble = this.shadowRoot.querySelector('#bubble');
+		const container = this.shadowRoot.querySelector('#container');
 
 		let hsize = 1.9*this.amountOfItems+1.2;
 		if(hsize>14.6) hsize = 14.6;
@@ -2277,12 +2372,14 @@ class ValidatedInput extends FabsElement {
 			case this.states.initial:
 				//console.log("initial");
 				bubble.style.height = "calc( 100% - 2 * var(--border-width) )";
+				setTimeout(() => { container.style.zIndex = "auto"; }, 800);
 				button.symbol = 'downArrow';
 				button.color = 'var(--fabs-color)';
 				break;
 			case this.states.selecting:
 				//console.log("selecting");
 				bubble.style.height = `calc(${hsize}em + 1px)`;
+				container.style.zIndex = "100";
 				button.symbol = 'downArrow';
 				button.color = 'black';
 				input.focus();
@@ -2290,12 +2387,14 @@ class ValidatedInput extends FabsElement {
 			case this.states.selected:
 				//console.log("selected");
 				bubble.style.height = "calc( 100% - 2 * var(--border-width) )";
+				setTimeout(() => { container.style.zIndex = "auto"; }, 800);
 				button.symbol = "checkMark";
 				button.color = 'green';
 				break;
 			case this.states.new:
 				//console.log("new");
 				bubble.style.height = `calc(${hsize}em + 1px)`;
+				container.style.zIndex = "100";
 				button.symbol = "cross";
 				button.color = 'var(--fabs-color)';
 				break;
@@ -2303,14 +2402,24 @@ class ValidatedInput extends FabsElement {
 	}
 
 	static get observedAttributes(){
-		return ['style','number'];
+		return ['style','number','placeholder','value','maxlength'];
 	}
 
 	attributeChangedCallback(name, oldValue, newValue){
 		const view = this.shadowRoot.querySelector('#bubble');
 		if(name === 'number'){
 			this.shadowRoot.querySelector('#input').number = true;
-			console.log("number activado.");
+		}
+		if(name === 'placeholder'){
+			this.shadowRoot.querySelector('#input').placeholder = newValue;
+		}
+		if(name === 'value'){
+			this.oldItem = this.newItem;
+			this.newItem = {id:null,value:newValue};
+			this.shadowRoot.querySelector('#input').value = newValue;
+		}
+		if(name === 'maxlength'){
+			this.shadowRoot.querySelector('#input').maxLength = newValue;
 		}
 	}
 
@@ -2321,6 +2430,30 @@ class ValidatedInput extends FabsElement {
 
 	get number(){
 		return this.hasAttribute('number');
+	}
+
+	set placeholder(value){
+		this.setAttribute('placeholder',value);
+	}
+
+	get placeholder(){
+		return this.getAttribute('placeholder');
+	}
+
+	set value(value){
+		this.setAttribute('value',value);
+	}
+
+	get value(){
+		return this.shadowRoot.getElementById('input').value;
+	}
+
+	set maxLength(value){
+		this.setAttribute('maxlength',value);
+	}
+
+	get maxLength(){
+		return this.getAttribute('maxlength');
 	}
 }
 
