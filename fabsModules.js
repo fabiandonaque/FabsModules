@@ -842,9 +842,109 @@ class CheckBox extends FabsElement {
 				//console.log("attribute on",newValue,oldValue);
 				if(newValue != null){
 					this.shadowRoot.getElementById('knob').style.left = "calc(100% - 1.2em)";
-					this.shadowRoot.getElementById('container').style.backgroundColor = "#00FF50";
+					this.shadowRoot.getElementById('container').style.backgroundColor = "#00cc41";
 				} else {
 					this.shadowRoot.getElementById('knob').style.left = "0";
+					this.shadowRoot.getElementById('container').style.backgroundColor = "#CFCFCF";
+				}
+				this.dispatchEvent(new CustomEvent('fabs-change',{detail:this.hasAttribute('on')}));
+				break;
+			default:
+
+		}
+	}
+
+	get disabled(){
+		return this.hasAttribute('disabled');
+	}
+
+	set disabled(val){
+		if (val) {
+			this.shadowRoot.getElementById('container').style.cursor = "default";
+			this.setAttribute('disabled', '');
+		} else {
+			this.shadowRoot.getElementById('container').style.cursor = "pointer";
+			this.removeAttribute('disabled');
+		}
+	}
+
+	get on(){
+		return this.hasAttribute('on');
+	}
+
+	set on(val){
+		if (val) {
+			this.setAttribute('on', '');
+		} else {
+			this.removeAttribute('on');
+		}
+	}
+
+}
+
+class CircularCheckBox extends FabsElement {
+	constructor(){
+		super();
+		this.about.parentClass = "FabsElement";
+		this.about.description = "numbercheckbox";
+		this.about.createdOn = "2020-04-20";
+		this.about.modifieOn = "2020-04-20";
+
+		this.shadowRoot.innerHTML += `
+		<style>
+			:host {
+				height: 1.9em;
+				width: 1.9em;
+			}
+			#container {
+				--border-width: 0.3em;
+				position: absolute;
+				top: 0;
+				left: 0;
+				width: calc(100% - 2 * var(--border-width) );
+				height: calc(100% - 2 * var(--border-width) );
+				cursor: pointer;
+				background-color: #CFCFCF;
+				border-style: inset;
+				border-radius: 1.3em;
+				border-color: #EFEFEF;
+				border-width: var(--border-width);
+				transition: background-color 0.4s;
+				transition: color 0.4s;
+				text-align: center;
+				line-height: 1.3em;
+			}
+		</style>
+		<div id="container">
+			<slot></slot>
+		</div>
+		`;
+	}
+	connectedCallback(){
+		this.addEventListener('click', e => {
+			if(this.hasAttribute('on')) this.removeAttribute('on');
+			else this.setAttribute('on','');
+		});
+	}
+
+	static get observedAttributes(){
+		return ['disabled','on'];
+	}
+
+	attributeChangedCallback(name, oldValue, newValue){
+		//console.log("attributeChangedCallback",name);
+		switch (name) {
+			case "disabled":
+				if(newValue) this.shadowRoot.getElementById('container').style.cursor = "default";
+				else this.shadowRoot.getElementById('container').style.cursor = "pointer";
+				break;
+			case "on":
+				//console.log("attribute on",newValue,oldValue);
+				if(newValue != null){
+					this.shadowRoot.getElementById('container').style.color = "white";
+					this.shadowRoot.getElementById('container').style.backgroundColor = "#00cc41";
+				} else {
+					this.shadowRoot.getElementById('container').style.color = "black";
 					this.shadowRoot.getElementById('container').style.backgroundColor = "#CFCFCF";
 				}
 				this.dispatchEvent(new CustomEvent('fabs-change',{detail:this.hasAttribute('on')}));
@@ -1013,181 +1113,174 @@ class FilterDateItem extends HTMLElement {
 }
 
 class FilterElementsItem extends HTMLElement {
-    // Class Methods
-    constructor()
-    {
-        super();
-        var shadow = this.attachShadow({mode: 'open'});
-        shadow.innerHTML = `
-        <style>
-            *{
-                margin: 0;
-                padding: 0;
-                border: 0;
-            }
-            :host{
-                position:relative;
-                display: block;
-                width: 100%;
-            }
-            #container{
-                position:relative;
-                display: block;
-                width: 100%;
-                margin-top: 1em;
-            }
-            #titleBox{
-                cursor:pointer;
-            }
-            #items{
-                display:block;
-                width:100%;
-                height: auto;
-                max-height:300px;
-                overflow: scroll;
-                border-bottom:1px solid black;
-            }
-            .item{
-                display:block;
-                width:100%;
-                cursor:pointer;
-            }
-            .item input{
-                margin-right:1em;
-                margin-left:1em;
-            }
-            #title{
-                display:inline-block;
-                margin-left: 0.5em;
-            }
-            .right{
-                display:inline-block;
-                margin-left:1.05em;
-                width: 0;
-                height: 0;
-                border-top: 0.4em solid transparent;
-                border-bottom: 0.4em solid transparent;
-                border-left: 0.4em solid black;
-            }
-            .down{
-                display:inline-block;
-                margin-left:0.7em;
-                width: 0;
-                height: 0;
-                border-left: 0.4em solid transparent;
-                border-right: 0.4em solid transparent;
-                border-top: 0.4em solid black;
-            }
-        </style>
-        <div id="container">
-            <div id="titleBox">
-                <div id="triangle" class="down"></div>
-                <p id="title">Filtrar por elemento:</P>
-            </div>
-            <label class="item" id="selectAll">
-                <input type="checkbox" id="first" checked/>Todos
-            </label>
-            <div id="items"></div>
-        </div>
-        `;
-    }
-
-    connectedCallback(){
-        let first = this.shadowRoot.querySelector("#first");
-        first.addEventListener('change', e => this.checkChecked(e.target));
-        let triangle = this.shadowRoot.getElementById('triangle');
-        let titleBox = this.shadowRoot.getElementById('titleBox');
-        titleBox.addEventListener('click', e => {
-            if(triangle.className == "right"){
-                triangle.className = "down";
-                this.shadowRoot.getElementById('selectAll').style.display = 'block';
-                this.shadowRoot.getElementById('items').style.display = 'block';
-            }
-            else{
-                triangle.className = "right";
-                this.shadowRoot.getElementById('selectAll').style.display = 'none';
-                this.shadowRoot.getElementById('items').style.display = 'none';
-            }
-        });
-    }
-
-    // Custom Methods
-
-    setConfiguration(data){
-        this.entityName = data.entityName;
-        this.entityId = data.entityId;
-        this.shadowRoot.getElementById('title').innerHTML = data.entityName;
-        data.elements.forEach(function(element) {
-            var itemCheckbox = document.createElement('input');
-            let itemLabel = document.createElement('label');
-
-
-            itemCheckbox.type = 'checkbox';
-            itemCheckbox.id = element.id;
-            itemLabel.addEventListener('change', e => this.checkChecked(e.target));
-            itemLabel.className="item";
-            itemLabel.appendChild(itemCheckbox);
-            itemLabel.innerHTML += element.value;
-
-            this.shadowRoot.getElementById('items').appendChild(itemLabel);
-        },this);
-    }
-
-    checkChecked(element){
-        if(element.id == "first"){
-            let inputs = this.shadowRoot.querySelectorAll("input");
-            inputs.forEach(function(input){
-                input.checked = false;
-            },this);
-            element.checked = true;
-        } else {
-            var isFirstChecked = true;
-            let inputs = this.shadowRoot.querySelectorAll("input");
-            inputs.forEach(function(input){
-                if(input.checked) isFirstChecked = false;
-            },this);
-            this.shadowRoot.querySelector("#first").checked = isFirstChecked;
-        }
-    }
-
-    getItemResult(){
-        if(!this.shadowRoot.querySelector("#first").checked){
-			var data = [];
-            let inputs = this.shadowRoot.querySelectorAll("input");
-            inputs.forEach(function(input){
-                if(input.checked) data.push(input.id);
-            },this);
-
-            var final = {'id':this.entityId,'data':data};
-            return final;
-        } else {
-			return "";
+	constructor()
+	{
+		super();
+		this.about = {
+			"parentClass":'HTMLElement',
+			"createdBy":"Fabián Doñaque",
+			"company":"Fabs Robotics",
+			"createdOn": '2020-04-16',
+			"modifiedOn": '2020-04-17',
+			"methods":[],
+			"attributes":[],
+			"events": []
 		}
-    }
+		this.about.description = "Elemento para crear un filtro por elemento. Hay que usar el método setItemElements() para dotarlo de contenido.";
+		this.about.createdOn = "2019-10-01";
+		this.about.createdOn = "2020-04-28";
+		const shadow = this.attachShadow({mode: 'open'});
+		shadow.innerHTML = `
+			<style>
+				:host{
+					postion: relative;
+					display: block;
+					width: 100%;
+				}
+				#container{
+					position:relative;
+					display: block;
+					width: 100%;
+					margin-top: 1em;
+				}
+				#titleBox{
+					cursor:pointer;
+				}
+				#items{
+					display:block;
+					width:100%;
+					height: auto;
+					max-height:300px;
+					overflow: scroll;
+					border-bottom:1px solid black;
+				}
+				.item{
+					display:block;
+					width:100%;
+					cursor:pointer;
+				}
+				.item input{
+					margin-right:1em;
+					margin-left:1em;
+				}
+				#title{
+					display:inline-block;
+					margin-left: 0.5em;
+				}
+				.right{
+					display:inline-block;
+					margin-left:1.05em;
+					width: 0;
+					height: 0;
+					border-top: 0.4em solid transparent;
+					border-bottom: 0.4em solid transparent;
+					border-left: 0.4em solid black;
+				}
+				.down{
+					display:inline-block;
+					margin-left:0.7em;
+					width: 0;
+					height: 0;
+					border-left: 0.4em solid transparent;
+					border-right: 0.4em solid transparent;
+					border-top: 0.4em solid black;
+				}
+			</style>
+			<div id="container">
+				<div id="titleBox">
+					<div id="triangle" class="down"></div>
+					<p id="title">Filtrar por elemento:</P>
+				</div>
+				<label class="item" id="selectAll">
+					<input type="checkbox" id="first" checked/>Todos
+				</label>
+				<div id="items"></div>
+			</div>
+		`;
+	}
 
-    about(){
-        var about = {
-            "Description":"Elemento para crear un filtro por elemento. Hay que usar el método setItemElements() para dotarlo de contenido.",
-            "CreatedBy":"Fabián Doñaque",
-            "Company":"Fabs Robotics",
-            "CreatedOn":"Oct 2019",
-            "ModifiedOn":"Oct 2019",
-            "Methods":[
-                {
-                    'Name':'getItemResult()',
-                    'Description':'Si Select All está desactivado, devuelve un string, con formato MYSQL, con todos los valores seleccionados',
-                    'Return':'element IN (elements...)'
-                },
-                {
-                    'Name':'setItemElements()',
-                    'Description':'Introduce los elementos por los que se desea filtrar. El formato es un array json en el que cada elemento tiene "id" y "name".',
-                    'Return':'null'
-                }
-                ],
-            "Attributes":[]
-        }
-        return(about);
-    }
+	connectedCallback(){
+		let first = this.shadowRoot.querySelector("#first");
+		first.addEventListener('change', e => this.checkChecked(e.target));
+		let triangle = this.shadowRoot.getElementById('triangle');
+		let titleBox = this.shadowRoot.getElementById('titleBox');
+		titleBox.addEventListener('click', e => {
+			if(triangle.className == "right"){
+				triangle.className = "down";
+				this.shadowRoot.getElementById('selectAll').style.display = 'block';
+				this.shadowRoot.getElementById('items').style.display = 'block';
+			} else{
+				triangle.className = "right";
+				this.shadowRoot.getElementById('selectAll').style.display = 'none';
+				this.shadowRoot.getElementById('items').style.display = 'none';
+			}
+		});
+	}
+
+	// Custom Methods
+
+	setContent(content){
+		this.content = content;
+		content.forEach( element => {
+			var itemCheckbox = document.createElement('input');
+			let itemLabel = document.createElement('label');
+			itemCheckbox.type = 'checkbox';
+			itemCheckbox.id = element.id;
+			itemLabel.addEventListener('change', e => this.checkChecked(e.target));
+			itemLabel.className="item";
+			itemLabel.appendChild(itemCheckbox);
+			itemLabel.innerHTML += element.value;
+			this.shadowRoot.getElementById('items').appendChild(itemLabel);
+		});
+	}
+
+	checkChecked(element){
+		if(element.id == "first"){
+			let inputs = this.shadowRoot.querySelectorAll("input");
+			inputs.forEach(function(input){
+				input.checked = false;
+			},this);
+			element.checked = true;
+		} else {
+			var isFirstChecked = true;
+			let inputs = this.shadowRoot.querySelectorAll("input");
+			inputs.forEach(function(input){
+				if(input.checked) isFirstChecked = false;
+			},this);
+			this.shadowRoot.querySelector("#first").checked = isFirstChecked;
+		}
+		this.dispatchEvent(new CustomEvent('filterUpdated'));
+	}
+
+	getFilteredData(){
+		if(!this.shadowRoot.querySelector("#first").checked){
+			var data = [];
+			let inputs = this.shadowRoot.querySelectorAll("input");
+			inputs.forEach(function(input){
+				if(input.checked) data.push(input.id);
+			},this);
+			return data;
+		} else return "";
+	}
+
+	static get observedAttributes(){
+		return ['title'];
+	}
+
+	attributeChangedCallback(name, oldValue, newValue){
+		if(name === 'title'){
+			this.shadowRoot.getElementById('title').innerHTML = "<u>"+newValue+":</u>";
+		}
+	}
+
+	set title(value){
+		if(value) this.setAttribute('title',value);
+		else this.removeAttribute('title');
+	}
+
+	get title(){
+		return this.getAttribute('title');
+	}
 }
 
 class FilterView extends HTMLElement {
@@ -1334,6 +1427,7 @@ class InputText extends FabsElement {
 					display:none;
 				}
 				input{
+					width: 100%;
 					flex: 1;
 					height: auto;
 					border-radius: 0;
@@ -1354,7 +1448,7 @@ class InputText extends FabsElement {
 	}
 
 	static get observedAttributes(){
-		return ['size','placeholder','password','readonly','color','label','underline','number','space','maxlength'];
+		return ['size','placeholder','password','readonly','color','label','underline','number','space','maxlength','center'];
 	}
 
 	attributeChangedCallback(name, oldValue, newValue){
@@ -1369,7 +1463,7 @@ class InputText extends FabsElement {
 				this.shadowRoot.getElementById('text').type = "password";
 				break;
 			case "number":
-				this.shadowRoot.getElementById('text').type = "number";
+				//this.shadowRoot.getElementById('text').type = "number";
 				break;
 			case "readonly":
 				this.shadowRoot.getElementById('text').readOnly = true;
@@ -1390,6 +1484,9 @@ class InputText extends FabsElement {
 				break;
 			case "maxlength":
 				this.shadowRoot.getElementById('text').maxLength = newValue;
+				break;
+			case "center":
+				this.shadowRoot.getElementById('text').style.textAlign = "center";
 				break;
 		}
 	}
@@ -1473,6 +1570,15 @@ class InputText extends FabsElement {
 
 	set maxLength(value){
 		this.setAttribute('maxlength',value);
+	}
+
+	get center(){
+		return this.hasAttribute('center');
+	}
+
+	set center(value){
+		if(value) this.setAttribute('center','');
+		else this.removeAttribute('center');
 	}
 }
 
@@ -1603,7 +1709,7 @@ class ListView extends FabsElement {
 		this.dispatchEvent(new CustomEvent("itemSelected",{detail:{oldItem:this.oldItem,newItem:this.newItem}}));
 	}
 
-	selectItem(itemId,callback){
+	setItem(itemId,callback){
 		let value = "";
 		const lis = this.shadowRoot.querySelectorAll("li");
 		lis.forEach(item => {
@@ -1616,6 +1722,21 @@ class ListView extends FabsElement {
 			}
 		});
 		if(callback) callback(value);
+	}
+
+	selectItem(itemId){
+		let found = false;
+		const lis = this.shadowRoot.querySelectorAll("li");
+		lis.forEach(item => {
+			item.classList.remove("selected");
+			if(item.id == itemId){
+				item.classList.add("selected");
+				this.oldItem = this.newItem;
+	 			this.newItem = {id:item.id,value:item.innerHTML};
+				found = true;
+			}
+		});
+		if(found) this.dispatchEvent(new CustomEvent("itemSelected",{detail:{oldItem:this.oldItem,newItem:this.newItem}}));
 	}
 
 	setFirstSelected(){
@@ -2311,7 +2432,7 @@ class ValidatedInput extends FabsElement {
 	}
 
 	selectItem(itemId){
-		this.shadowRoot.querySelector('#list').selectItem(itemId, response => {
+		this.shadowRoot.querySelector('#list').setItem(itemId, response => {
 			// Se cambia el valor
 			this.shadowRoot.querySelector('#input').value = response;
 			this.oldItem = this.newItem;
@@ -2457,6 +2578,156 @@ class ValidatedInput extends FabsElement {
 	}
 }
 
+class InputClock extends FabsElement {
+	constructor()
+	{
+		super();
+		this.about.parentClass = "FabsComponent";
+		this.about.createdOn = "2020-04-28";
+		this.about.createdOn = "2020-04-28";
+
+		this.shadowRoot.innerHTML += `
+			<style>
+				:host {
+					overflow: visible;
+					--element-height: 1.5em;
+					--element-width: 4.5em;
+				}
+				#container {
+					position: relative;
+					height: var(--element-height);
+					width: var(--element-width);
+					overflow: visible;
+					border: 1px solid black;
+				}
+				#hoursBox{
+					position: relative;
+					float: left;
+					width: calc( 5 * var(--element-width) / 12 );
+					height: var(--element-height);
+				}
+				#dotsBox{
+					position: relative;
+					float: left;
+					width: calc( var(--element-width) / 6 );
+					height: var(--element-height);
+					text-align: center;
+				}
+				#minutesBox{
+					position: relative;
+					float: left;
+					width: calc( 5 * var(--element-width) / 12 );
+					height: var(--element-height);
+				}
+				#hoursInner1{
+					width: 100%;
+					height: 100%;
+					line-height: var(--element-height);
+				}
+				#hoursInner2{
+					width: 2.5em;
+					height: 0;
+				}
+				#minutesInner1{
+					width: 100%;
+					height: 100%;
+					line-height: var(--element-height);
+				}
+				#minutesInner2{
+					width: 2.5em;
+					height: 0;
+				}
+				fabs-input-text {
+					width: 100%;
+					height: 100%;
+				}
+			</style>
+			<div id="container">
+				<div id="hoursBox" class="numbers">
+					<div id="hoursInner1">
+						<fabs-input-text number id="hoursInput" center placeholder="hh"></fabs-input-text>
+					</div>
+					<div id="hoursInner2">
+						<fabs-list-view id="hoursList"></fabs-list-view>
+					</div>
+				</div>
+				<div id="dotsBox">:</div>
+				<div id="minutesBox" class="numbers">
+					<div id="minutesInner1">
+						<fabs-input-text number id="minutesInput" center  placeholder="mm"></fabs-input-text>
+					</div>
+					<div id="minutesInner2">
+						<fabs-list-view id="minutesList"></fabs-list-view>
+					</div>
+				</div>
+			</div>
+		`;
+	}
+
+	connectedCallback(){
+		const container = this.shadowRoot.querySelector('#container');
+		const hoursBox = this.shadowRoot.querySelector('#hoursBox');
+		const minutesBox = this.shadowRoot.querySelector('#minutesBox');
+		const hoursInner1 = this.shadowRoot.querySelector('#hoursInner1');
+		const hoursInner2 = this.shadowRoot.querySelector('#hoursInner2');
+		const minutesInner1 = this.shadowRoot.querySelector('#minutesInner1');
+		const minutesInner2 = this.shadowRoot.querySelector('#minutesInner2');
+		const hoursInput = this.shadowRoot.querySelector('#hoursInput');
+		const minutesInput = this.shadowRoot.querySelector('#minutesInput');
+		const hoursList = this.shadowRoot.querySelector('#hoursList');
+		const minutesList = this.shadowRoot.querySelector('#minutesList');
+
+		hoursInput.addEventListener('focus', e => {
+			hoursBox.style.zIndex = "100";
+			hoursInner2.style.height = "10em";
+		});
+
+		minutesInput.addEventListener('focus', e => {
+			minutesBox.style.zIndex = "100";
+			minutesInner2.style.height = "10em";
+		});
+		hoursList.style.backgroundColor = "white";
+		minutesList.style.backgroundColor = "white";
+		hoursList.style.setProperty('--element-padding','0.2em');
+		minutesList.style.setProperty('--element-padding','0.2em');
+		hoursList.style.setProperty('--element-height','2em');
+		minutesList.style.setProperty('--element-height','2em');
+
+		hoursList.setContent([{id:0,value:0},{id:1,value:1},{id:2,value:2},{id:3,value:3},{id:4,value:4},{id:5,value:5},{id:6,value:6},{id:7,value:7},{id:8,value:8},{id:9,value:9},{id:10,value:10},{id:11,value:11},{id:12,value:12},{id:13,value:13},{id:14,value:14},{id:15,value:15},{id:16,value:16},{id:17,value:17},{id:18,value:18},{id:19,value:19},{id:20,value:20},{id:21,value:21},{id:22,value:22},{id:23,value:23}]);
+		minutesList.setContent([{id:0,value:0},{id:1,value:1},{id:2,value:2},{id:3,value:3},{id:4,value:4},{id:5,value:5},{id:6,value:6},{id:7,value:7},{id:8,value:8},{id:9,value:9},{id:10,value:10},{id:11,value:11},{id:12,value:12},{id:13,value:13},{id:14,value:14},{id:15,value:15},{id:16,value:16},{id:17,value:17},{id:18,value:18},{id:19,value:19},{id:20,value:20},{id:21,value:21},{id:22,value:22},{id:23,value:23},{id:0,value:24},{id:25,value:25},{id:26,value:26},{id:27,value:27},{id:28,value:28},{id:29,value:29},{id:30,value:30},{id:31,value:31},{id:32,value:32},{id:33,value:33},{id:34,value:34},{id:35,value:35},{id:36,value:36},{id:37,value:37},{id:38,value:38},{id:39,value:39},{id:40,value:40},{id:41,value:41},{id:42,value:42},{id:43,value:43},{id:44,value:44},{id:45,value:45},{id:46,value:46},{id:47,value:47},{id:48,value:48},{id:49,value:49},{id:50,value:50},{id:51,value:51},{id:52,value:52},{id:53,value:53},{id:54,value:54},{id:55,value:55},{id:56,value:56},{id:57,value:57},{id:58,value:58},{id:59,value:59}]);
+
+		hoursList.addEventListener('itemSelected', e => {
+			hoursInput.value = e.detail.newItem.value;
+			hoursList.blur();
+			hoursBox.style.zIndex = "auto";
+			hoursInner2.style.height = "0";
+		});
+		minutesList.addEventListener('itemSelected', e => {
+			minutesInput.value = e.detail.newItem.value;
+			minutesList.blur();
+			minutesBox.style.zIndex = "auto";
+			minutesInner2.style.height = "0";
+		});
+
+		hoursInput.addEventListener('endEditing',e => {
+			hoursBox.style.zIndex = "auto";
+			hoursInner2.style.height = "0";
+		});
+
+		minutesInput.addEventListener('endEditing',e => {
+			minutesBox.style.zIndex = "auto";
+			minutesInner2.style.height = "0";
+		});
+	}
+
+	static get observedAttributes(){
+		return [];
+	}
+
+	attributeChangedCallback(name, oldValue, newValue){
+	}
+}
+
 
 ///////////////
 //  Defines  //
@@ -2481,3 +2752,5 @@ customElements.define('fabs-validated-input', ValidatedInput);
 customElements.define('fabs-view', View);
 customElements.define('fabs-button-symbol', ButtonSymbol);
 customElements.define('fabs-checkbox', CheckBox);
+customElements.define('fabs-circular-checkbox', CircularCheckBox);
+customElements.define('fabs-input-clock', InputClock);
