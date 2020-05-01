@@ -63,6 +63,7 @@ class FabsElement extends HTMLElement {
 					overflow:hidden;
 					background-color: var(--background-color);
 					color: var(--text-color);
+					cursor: default;
 				}
 				*{
 					margin: 0;
@@ -71,22 +72,6 @@ class FabsElement extends HTMLElement {
 				}
 			</style>
 		`;
-		this.observer = new MutationObserver((mutations) => {
-			this.dispatchEvent(new CustomEvent('LightDOMChanged',{
-				detail: {
-					addedNodes: mutations[0].addedNodes,
-					removedNodes: mutations[0].removedNodes
-				}
-			}));
-		});
-
-		this.observer.observe(this, {
-			childList: true
-		});
-	}
-
-	disconnectedCallback(){
-		if(this.observer) this.observer.disconnect();
 	}
 }
 
@@ -106,16 +91,13 @@ class View extends FabsElement {
 	}
 }
 
-class CenterText extends FabsElement {
+class TextCenter extends FabsElement {
 
 	constructor(){
 		super();
 		this.about.parentClass = "FabsComponent";
 		this.about.createdOn = "2020-04-15";
 		this.about.createdOn = "2020-04-16";
-	}
-
-	connectedCallback(){
 		this.shadowRoot.innerHTML += `
 			<style>
 				:host{
@@ -130,10 +112,12 @@ class CenterText extends FabsElement {
 				<slot></slot>
 			</span>
 		`;
+		this.updateText = this.updateText.bind(this);
+	}
 
-		this.addEventListener('LightDOMChanged', e => {
-			this.updateText();
-		});
+	connectedCallback(){
+		this.updateText();
+		this.shadowRoot.getElementById('container').addEventListener('slotchange',this.updateText);
 	}
 
 	static get observedAttributes(){
@@ -150,6 +134,9 @@ class CenterText extends FabsElement {
 		if(name == "style"){
 			this.updateText();
 		}
+	}
+	disconnectedCallback(){
+		this.shadowRoot.getElementById('container').removeEventListener('slotchange',this.updateText);
 	}
 
 	updateText(){
@@ -185,6 +172,89 @@ class CenterText extends FabsElement {
 			/*console.log("newTextLength",newText.length);
 			console.log("newTextWidth",ctx.measureText(newText).width);*/
 		}
+	}
+}
+
+class TextCenterLine extends FabsElement {
+
+	constructor(){
+		super();
+		this.about.parentClass = "FabsComponent";
+		this.about.createdOn = "2020-04-15";
+		this.about.createdOn = "2020-04-16";
+		this.shadowRoot.innerHTML += `
+			<style>
+				:host{
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					white-space: nowrap;
+					--user-select: none;
+					--element-cursor: default;
+					-webkit-user-select: var(--user-select);  /* Chrome all / Safari all */
+					-moz-user-select: var(--user-select);    /* Firefox all */
+					-ms-user-select: var(--user-select);      /* IE 10+ */
+					user-select: var(--user-select);
+				}
+			</style>
+			<slot id="container"></slot>
+		`;
+		this.updateText = this.updateText.bind(this);
+	}
+
+	connectedCallback(){
+		this.updateText();
+		this.shadowRoot.getElementById('container').addEventListener('slotchange',this.updateText);
+		this.observer = new ResizeObserver(this.updateText);
+		this.observer.observe(this, {attributes: true})
+	}
+
+	static get observedAttributes(){
+		return ['textcolor','backgroundcolor'];
+	}
+
+	attributeChangedCallback(name, oldValue, newValue){
+		console.log("center text cambio algo");
+		if(name == "textcolor"){
+			this.shadowRoot.host.style.setProperty('--text-color',newValue);
+		}
+		if(name == "backgroundcolor"){
+			this.shadowRoot.host.style.setProperty('--background-color',newValue);
+		}
+	}
+
+	disconnectedCallback(){
+		this.shadowRoot.getElementById('container').removeEventListener('slotchange',this.updateText);
+		this.observer.disconnect();
+	}
+
+	updateText(){
+		let text = this.innerText;
+		let textLength = text.length;
+		if(textLength == 0) return;
+		const totalWidth = this.clientWidth;
+
+		const canvas = document.createElement('canvas');
+		const ctx = canvas.getContext('2d');
+		ctx.font = getComputedStyle(this).font;
+
+		let textWidth = ctx.measureText(text).width;
+		const dotsWidth = ctx.measureText("...").width;
+
+		if(dotsWidth > totalWidth){
+			this.innerText = "";
+			return;
+		}
+
+		let newText = text;
+
+		while(totalWidth < textWidth){
+			textLength = text.length-1;
+			text = text.substr(0,textLength);
+			newText = text + "...";
+			textWidth = ctx.measureText(newText).width;
+		}
+		if(this.innerText !== newText) this.innerText = newText;
 	}
 }
 
@@ -273,7 +343,7 @@ class CenterView extends HTMLElement {
 //  Symbols  //
 ///////////////
 
-class ButtonSymbol extends FabsElement {
+class Symbol extends FabsElement {
 	constructor(){
 		super();
 		this.about.parentClass = "FabsElement";
@@ -433,85 +503,6 @@ class ButtonSymbol extends FabsElement {
 //  Buttons  //
 ///////////////
 
-class AddButton extends FabsElement {
-	constructor(){
-		super();
-		this.about.parentClass = "FabsComponent";
-		this.about.createdOn = "2019-09-01";
-		this.about.createdOn = "2020-04-17";
-
-		this.shadowRoot.innerHTML += `
-        <style>
-            :host{
-                --element-color: var(--fabs-color);
-                --size: 1px;
-                cursor:pointer;
-            }
-            #vertical {
-              background: var(--element-color);
-              position: absolute;
-              top: calc( var(--size) / 3 );
-              left: calc( ( 100% - ( var(--size) / 3 ) ) / 2 );
-              height: var(--size);
-              width: calc( var(--size) / 3 );
-            }
-            #horizontal {
-              background: var(--element-color);
-              position: absolute;
-              top: calc( ( 100% - ( var(--size) / 3 ) ) / 2 );
-              left: calc( ( 100% - var(--size) ) / 2 );
-              height: calc( var(--size) / 3 );
-              width: var(--size)
-            }
-        </style>
-		<fabs-view>
-			<div id="vertical"></div>
-    		<div id="horizontal"></div>
-		</fabs-view>
-        `;
-	}
-
-	connectedCallback(){
-    }
-
-	static get observedAttributes(){
-		return ['color','backgroundcolor','size','style','disabled'];
-	}
-
-    attributeChangedCallback(name, oldValue, newValue){
-        if(name == "color"){
-            this.shadowRoot.host.style.setProperty('--element-color',newValue);
-        }
-        if(name == "backgroundcolor"){
-            this.shadowRoot.host.style.setProperty('--background-color',newValue);
-        }
-        if(name == "style"){
-			let value = 'calc( 3 * '+this.style.height+' / 5 )';
-			let size = this.shadowRoot.host.style.getPropertyValue('--size');
-			if(size !== value) this.shadowRoot.host.style.setProperty('--size',value);
-        }
-		if(name == "disabled"){
-			this.shadowRoot.host.style.cursor = "inherit";
-        }
-    }
-
-
-
-	get disabled(){
-		return this.hasAttribute('disabled');
-	}
-
-	set disabled(val){
-		if (val) {
-			this.shadowRoot.host.style.cursor = "inherit";
-			this.setAttribute('disabled', '');
-		} else {
-			this.shadowRoot.host.style.cursor = "pointer";
-			this.removeAttribute('disabled');
-		}
-	}
-}
-
 class OptionButton extends FabsElement {
 	constructor(){
 		super();
@@ -582,195 +573,131 @@ class OptionButton extends FabsElement {
 		}
 	}
 }
+class Button extends FabsElement {
+	constructor(){
+		super();
+		this.about.parentClass = "FabsComponent";
+		this.about.createdOn = "2019-09-01";
+		this.about.createdOn = "2020-04-17";
 
-class AddLabeledButton extends HTMLElement {
-    // Métodos de clase
-    constructor()
-    {
-        super();
-        var shadow = this.attachShadow({mode: 'open'});
-        shadow.innerHTML = `
-        <style>
-            *{
-                margin: 0;
-                padding: 0;
-                border: 0;
-            }
-            :host{
-                --element-color: #f2a72e;
-                --background-color: transparent;
-                --size: 1px;
-				display: block;
-                position:relative;
-                width: 100%;
-                height: 100%;
-				cursor: pointer;
-				background-color: var(--background-color);
-            }
-			fabs-split-view{
-				position:relative;
-                width: 100%;
-                height: 100%;
-			}
-        </style>
-		<fabs-split-view orientation="horizontal">
-			<fabs-center-text></fabs-center-text>
-			<fabs-add-button disabled></fabs-add-button>
-		</fabs-split-view>
-        `;
-    }
-
-    static get observedAttributes(){
-        return ['color','backgroundcolor','style','disabled'];
-    }
-
-    attributeChangedCallback(name, oldValue, newValue){
-        if(name == "color"){
-            this.shadowRoot.host.style.setProperty('--element-color',newValue);
-        }
-        if(name == "backgroundcolor"){
-            this.shadowRoot.host.style.setProperty('--background-color',newValue);
-        }
-        if(name == "style"){
-			this.shadowRoot.querySelector('fabs-split-view').setAttribute('size',this.style.height);
-			this.shadowRoot.querySelector('fabs-split-view').setAttribute('atend','');
-        }
-    }
-
-	get disabled(){
-		return this.hasAttribute('disabled');
+		this.shadowRoot.innerHTML += `
+			<style>
+				:host{
+					--element-width: 2em;
+					width: var(--element-width);
+					height: 2em;
+					background-color: var(--fabs-color);
+					cursor: pointer;
+				}
+				#text{
+					cursor: pointer;
+				}
+			</style>
+			<fabs-text-center-line id="text">
+				<slot id="container"></slot>
+			</fabs-text-center-line>
+		`;
+		this.updateSize = this.updateSize.bind(this);
 	}
 
-	set disabled(val){
-		if (val) {
-			this.shadowRoot.host.style.cursor = "default";
-			this.setAttribute('disabled', '');
-		} else {
-			this.shadowRoot.host.style.cursor = "pointer";
-			this.removeAttribute('disabled');
+	connectedCallback(){
+		this.shadowRoot.getElementById('container').addEventListener('slotchange',this.updateSize);
+		this.updateSize();
+	}
+	disconnectedCallback(){
+		this.shadowRoot.getElementById('container').removeEventListener('slotchange',this.updateText);
+	}
+	updateSize(){
+		let text = this.innerText;
+		let textLength = text.length;
+		if(textLength == 0) return;
+		const totalWidth = this.clientWidth;
+
+		const canvas = document.createElement('canvas');
+		const ctx = canvas.getContext('2d');
+		ctx.font = getComputedStyle(this).font;
+
+		let textWidth = ctx.measureText(text).width;
+		this.shadowRoot.host.style.setProperty('--element-width',"calc( "+textWidth+" * 1px + 2em )");
+	}
+
+	static get observedAttributes(){
+		return [];
+	}
+
+	attributeChangedCallback(name, oldValue, newValue){
+	}
+}
+
+class ButtonSymbol extends FabsElement {
+	constructor(){
+		super();
+		this.about.parentClass = "FabsComponent";
+		this.about.createdOn = "2019-09-01";
+		this.about.createdOn = "2020-04-17";
+
+		this.shadowRoot.innerHTML += `
+			<style>
+				:host{
+					--element-width: 2em;
+					--element-height: 2em;
+					width: var(--element-width);
+					height: var(--element-height);
+					background-color: transparent;
+					cursor: pointer;
+				}
+				#text {
+					cursor: pointer;
+				}
+			</style>
+			<slot id="slot"></slot>
+			<fabs-split-view orientation="horizontal" size="2em" atend id="splitView">
+				<fabs-text-center-line id="text"></fabs-text-center-line>
+				<fabs-symbol id="symbol"></fabs-symbol>
+			</fabs-split-view>
+		`;
+		this.updateText = this.updateText.bind(this);
+	}
+
+	connectedCallback(){
+		this.updateSize();
+		this.updateText();
+		this.shadowRoot.getElementById('slot').addEventListener('slotchange',this.updateText);
+	}
+
+	updateText(){
+		if(this.innerText == "") return;
+		this.text = this.innerText;
+		this.innerText = "";
+		this.shadowRoot.getElementById('text').innerText = this.text;
+	}
+
+	updateSize(){
+		this.width = getComputedStyle(this).width;
+		this.height = getComputedStyle(this).height;
+		const splitView = this.shadowRoot.getElementById('splitView');
+		if(this.text = ""){
+			splitView.setAttribute('size',this.width);
+		} else if(this.height > this.width){
+			if(parseFloat(this.width) > 32) splitView.setAttribute('size',"32px");
+			else splitView.setAttribute('size',this.width);
+		} else if(this.width >= this.height){
+			splitView.size = "32px";
 		}
 	}
 
-    connectedCallback(){
-		this.addEventListener('click',(e) => {
-			if(this.hasAttribute('disabled')) {
-				console.log("addButton stopPropagation");
-				//e.stopPropagation();
-			}
-		},true);
-		this.shadowRoot.querySelector('fabs-center-text').innerHTML = this.innerHTML;
+	static get observedAttributes(){
+		return ['symbol','style'];
 	}
 
-	disconnectedCallback(){
+	attributeChangedCallback(name, oldValue, newValue){
+		if(name == "symbol"){
+			this.shadowRoot.getElementById('symbol').setAttribute("symbol",newValue);
+		}
+		if(name == "style"){
+			this.updateSize();
+		}
 	}
-
-    // Métodos propios
-
-
-
-    about(){
-        var about = {
-            "Description":"",
-            "CreatedBy":"Fabián Doñaque",
-            "Company":"Fabs Robotics",
-            "CreatedOn":"Abr 2020",
-            "ModifiedOn":"Abr 2020",
-            "Methods":[],
-            "Attributes":[]
-        }
-        return(about);
-    }
-}
-
-class Button extends HTMLElement {
-    // Métodos de clase
-    constructor()
-    {
-        super();
-        var shadow = this.attachShadow({mode: 'open'});
-        shadow.innerHTML = `
-        <style>
-            *{
-                margin: 0;
-                padding: 0;
-                border: 0;
-            }
-            :host{
-                --element-color: #FFFFFF;
-                --background-color: #140951;
-                position:relative;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                width: auto;
-                height: auto;
-                overflow: hide;
-                border-radius: 9999px;
-                border-bottom:1px solid var(--background-color);
-                background-color: var(--background-color);
-                color: var(--element-color);
-                appearance: none;
-                cursor:pointer;
-            }
-            fabs{
-                position:relative;
-                diplay:block;
-                padding: 0.4em 0.6em;
-            }
-        </style>
-        <fabs>
-            <slot>
-                Button
-            </slot>
-        </fabs>
-        `;
-    }
-
-    static get observedAttributes(){
-        return ['callback','color','backgroundcolor'];
-    }
-
-    attributeChangedCallback(name, oldValue, newValue){
-        if(name == "callback"){
-            this.callback = newValue;
-        }
-        if(name == "color"){
-            this.shadowRoot.host.style.setProperty('--element-color',newValue);
-        }
-        if(name == "backgroundcolor"){
-            this.shadowRoot.host.style.setProperty('--background-color',newValue);
-        }
-    }
-
-    connectedCallback(){
-        /*this.addEventListener('click', e => {
-            if(typeof this.callback === 'function'){
-                this.callback(this);
-            }
-        });*/
-    }
-
-    // Métodos propios
-
-
-
-    about(){
-        var about = {
-            "Description":"Elemento para crear un bontón redondeado, el onclick se ejecuta a traves del atributo callback.",
-            "CreatedBy":"Fabián Doñaque",
-            "Company":"Fabs Robotics",
-            "CreatedOn":"Oct 2019",
-            "ModifiedOn":"Oct 2019",
-            "Methods":[],
-            "Attributes":[
-                {
-                    'Name':'callback',
-                    'Description': 'Sirve para asignar una función al onclick.'
-                }
-                ]
-        }
-        return(about);
-    }
 }
 
 class CheckBox extends FabsElement {
@@ -1910,34 +1837,6 @@ class PopupView extends FabsElement {
 
 class SplitView extends View {
 
-	get size(){	return this.getAttribute('size');}
-
-	set size(val){
-		if (val) this.setAttribute('size', val);
-		else this.removeAttribute('size');
-	}
-
-	get separator(){ return this.getAttribute('separator');}
-
-	set separator(val){
-		if (val) this.setAttribute('separator', val);
-		else this.removeAttribute('separator');
-	}
-
-	get orientation(){	return this.getAttribute('orientation');}
-
-	set orientation(val){
-		if (val) this.setAttribute('orientation', val);
-		else this.removeAttribute('orientation');
-	}
-
-	get atend(){	return this.getAttribute('atend');}
-
-	set atend(val){
-		if (val) this.setAttribute('atend', val);
-		else this.removeAttribute('atend');
-	}
-
 	constructor()
 	{
 		super();
@@ -2019,7 +1918,7 @@ class SplitView extends View {
 						this.children[0].style.borderRight = "1px solid black";
 						this.children[1].style.width = this.size;
 					} else {
-						this.children[0].style.width = "calc( 100% - "+this.size+" )";
+						this.children[0].style.setProperty('width',"calc( 100% - "+this.size+" )");
 						this.children[1].style.width = this.size;
 					}
 				} else {
@@ -2040,6 +1939,34 @@ class SplitView extends View {
 				this.children[i].style.display = "none";
 			}
 		}
+	}
+
+	get size(){	return this.getAttribute('size');}
+
+	set size(val){
+		if (val) this.setAttribute('size', val);
+		else this.removeAttribute('size');
+	}
+
+	get separator(){ return this.getAttribute('separator');}
+
+	set separator(val){
+		if (val) this.setAttribute('separator', val);
+		else this.removeAttribute('separator');
+	}
+
+	get orientation(){	return this.getAttribute('orientation');}
+
+	set orientation(val){
+		if (val) this.setAttribute('orientation', val);
+		else this.removeAttribute('orientation');
+	}
+
+	get atend(){ return this.getAttribute('atend');}
+
+	set atend(val){
+		if (val) this.setAttribute('atend', val);
+		else this.removeAttribute('atend');
 	}
 }
 
@@ -2344,7 +2271,7 @@ class ValidatedInput extends FabsElement {
 					<fabs-split-view size="1.3em" separator>
 						<fabs-split-view orientation="horizontal" size="2em" atend>
 							<fabs-input-text color="black" id="input"></fabs-input-text>
-							<fabs-button-symbol id="actionButton" symbol="downArrow" color="var(--fabs-color)"></fabs-button-symbol>
+							<fabs-symbol id="actionButton" symbol="downArrow" color="var(--fabs-color)"></fabs-symbol>
 						</fabs-split-view>
 						<fabs-list-view id="list" style="--element-height:1.9em;"></fabs-list-view>
 					</fabs-split-view>
@@ -2728,16 +2655,46 @@ class InputClock extends FabsElement {
 	}
 }
 
+class MasterDetailView extends FabsElement {
+	constructor()
+	{
+		super();
+		this.about.parentClass = "FabsComponent";
+		this.about.createdOn = "2020-04-29";
+		this.about.createdOn = "2020-04-29";
+
+		this.shadowRoot.innerHTML += `
+			<style>
+				:host {
+				}
+				::slotted(*){
+				}
+			</style>
+			<slot></slot>
+		`;
+	}
+
+	connectedCallback(){
+
+	}
+
+	static get observedAttributes(){
+		return [];
+	}
+
+	attributeChangedCallback(name, oldValue, newValue){
+	}
+}
 
 ///////////////
 //  Defines  //
 ///////////////
 
-customElements.define('fabs-add-button', AddButton);
 customElements.define('fabs-option-button', OptionButton);
-customElements.define('fabs-add-labeled-button', AddLabeledButton);
 customElements.define('fabs-button', Button);
-customElements.define('fabs-center-text', CenterText);
+customElements.define('fabs-button-symbol', ButtonSymbol);
+customElements.define('fabs-text-center', TextCenter);
+customElements.define('fabs-text-center-line', TextCenterLine);
 customElements.define('fabs-center-view', CenterView);
 customElements.define('fabs-filter-date-item', FilterDateItem);
 customElements.define('fabs-filter-elements-item', FilterElementsItem);
@@ -2750,7 +2707,8 @@ customElements.define('fabs-split-view', SplitView);
 customElements.define('fabs-table-view', TableView);
 customElements.define('fabs-validated-input', ValidatedInput);
 customElements.define('fabs-view', View);
-customElements.define('fabs-button-symbol', ButtonSymbol);
+customElements.define('fabs-symbol', Symbol);
 customElements.define('fabs-checkbox', CheckBox);
 customElements.define('fabs-circular-checkbox', CircularCheckBox);
 customElements.define('fabs-input-clock', InputClock);
+customElements.define('fabs-master-detail-view', MasterDetailView);
