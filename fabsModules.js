@@ -1,4 +1,4 @@
-'use strict'
+"use strict";
 
 /*
 	Fabián Doñaque
@@ -185,9 +185,10 @@ class TextCenterLine extends FabsElement {
 		this.shadowRoot.innerHTML += `
 			<style>
 				:host{
+					--text-align: center;
 					display: flex;
 					align-items: center;
-					justify-content: center;
+					justify-content: var(--text-align);
 					white-space: nowrap;
 					--user-select: none;
 					--element-cursor: default;
@@ -210,17 +211,26 @@ class TextCenterLine extends FabsElement {
 	}
 
 	static get observedAttributes(){
-		return ['textcolor','backgroundcolor'];
+		return ['textcolor','backgroundcolor','textalign'];
 	}
 
 	attributeChangedCallback(name, oldValue, newValue){
-		console.log("center text cambio algo");
 		if(name == "textcolor"){
 			this.shadowRoot.host.style.setProperty('--text-color',newValue);
 		}
 		if(name == "backgroundcolor"){
 			this.shadowRoot.host.style.setProperty('--background-color',newValue);
 		}
+		if(name == "textalign"){
+			this.shadowRoot.host.style.setProperty('--text-align',newValue);
+		}
+	}
+
+	set textalign(value){
+		this.setAttribute('textalign',value);
+	}
+	get textalign(){
+		this.getAttribute('textalign');
 	}
 
 	disconnectedCallback(){
@@ -334,7 +344,7 @@ class CenterView extends HTMLElement {
                     'Description':'Alto que tiene el marco interno'
                 }
                 ]
-        }
+        };
         return(about);
     }
 }
@@ -632,9 +642,9 @@ class Button extends FabsElement {
 class ButtonSymbol extends FabsElement {
 	constructor(){
 		super();
-		this.about.parentClass = "FabsComponent";
-		this.about.createdOn = "2019-09-01";
-		this.about.createdOn = "2020-04-17";
+		this.about.parentClass = 'FabsElement';
+		this.about.createdOn = '2019-04-30';
+		this.about.createdOn = '2020-05-01';
 
 		this.shadowRoot.innerHTML += `
 			<style>
@@ -644,9 +654,12 @@ class ButtonSymbol extends FabsElement {
 					width: var(--element-width);
 					height: var(--element-height);
 					background-color: transparent;
-					cursor: pointer;
+					cursor: inherit;
 				}
 				#text {
+					cursor: inherit;
+				}
+				#symbol {
 					cursor: pointer;
 				}
 			</style>
@@ -663,6 +676,9 @@ class ButtonSymbol extends FabsElement {
 		this.updateSize();
 		this.updateText();
 		this.shadowRoot.getElementById('slot').addEventListener('slotchange',this.updateText);
+		this.shadowRoot.getElementById('symbol').addEventListener('click', e => {
+			this.dispatchEvent(new CustomEvent('symbolClicked'));
+		});
 	}
 
 	updateText(){
@@ -676,7 +692,7 @@ class ButtonSymbol extends FabsElement {
 		this.width = getComputedStyle(this).width;
 		this.height = getComputedStyle(this).height;
 		const splitView = this.shadowRoot.getElementById('splitView');
-		if(this.text = ""){
+		if(this.text == ""){
 			splitView.setAttribute('size',this.width);
 		} else if(this.height > this.width){
 			if(parseFloat(this.width) > 32) splitView.setAttribute('size',"32px");
@@ -687,7 +703,7 @@ class ButtonSymbol extends FabsElement {
 	}
 
 	static get observedAttributes(){
-		return ['symbol','style'];
+		return ['symbol','style','textalign'];
 	}
 
 	attributeChangedCallback(name, oldValue, newValue){
@@ -697,6 +713,142 @@ class ButtonSymbol extends FabsElement {
 		if(name == "style"){
 			this.updateSize();
 		}
+		if(name == 'textalign'){
+			this.shadowRoot.getElementById('text').textalign = newValue;
+		}
+	}
+
+	set symbol(value){
+		if(value) this.setAttribute('symbol',value);
+		else this.removeAttribute('symbol');
+	}
+	get symbol(){
+		this.getAttribute('symbol');
+	}
+	set textalign(value){
+		this.setAttribute('textalign',value);
+	}
+	get textalign(){
+		this.getAttribute('textalign');
+	}
+}
+
+class InputSymbol extends FabsElement {
+	constructor(){
+		super();
+		this.about.parentClass = "FabsComponent";
+		this.about.createdOn = "2019-04-30";
+		this.about.createdOn = "2020-05-01";
+
+		this.shadowRoot.innerHTML += `
+			<style>
+				:host{
+					background-color: transparent;
+					--element-padding: 1em;
+				}
+				#text {
+					outline: none;
+					border: 0;
+					font: inherit;
+				}
+				#container{
+					width: calc( 100% - 2 * var(--element-padding) );
+					height: 100%;
+					padding: 0 var(--element-padding);
+				}
+			</style>
+			<slot id="slot"></slot>
+			<div id="container">
+				<fabs-split-view orientation="horizontal" size="2em" atend id="splitView">
+					<input id="text">
+					<fabs-symbol id="symbol"></fabs-symbol>
+				</fabs-split-view>
+			</div>
+		`;
+		this.updateText = this.updateText.bind(this);
+	}
+
+	connectedCallback(){
+		this.updateSize();
+		this.updateText();
+		this.shadowRoot.getElementById('slot').addEventListener('slotchange',this.updateText);
+		this.shadowRoot.getElementById('symbol').addEventListener('click', e => {
+			if(this.shadowRoot.getElementById('text').value != "") this.dispatchEvent(new CustomEvent('symbolAction',{detail:this.shadowRoot.getElementById('text').value}));
+		});
+		this.shadowRoot.getElementById('text').addEventListener('keydown', e => {
+			if(e.keyCode == 27){
+				this.shadowRoot.getElementById('text').value = "";
+				this.shadowRoot.getElementById('text').blur();
+			}
+			if(e.keyCode == 13){
+				this.shadowRoot.getElementById('text').blur();
+				if(this.shadowRoot.getElementById('text').value != "") this.dispatchEvent(new CustomEvent('symbolAction',{detail:this.shadowRoot.getElementById('text').value}));
+			}
+		});
+	}
+
+	updateText(){
+		if(this.innerText == "") return;
+		this.text = this.innerText;
+		this.innerText = "";
+		this.shadowRoot.getElementById('text').value = this.text;
+	}
+
+	updateSize(){
+		this.width = getComputedStyle(this).width;
+		this.height = getComputedStyle(this).height;
+		const splitView = this.shadowRoot.getElementById('splitView');
+		if(this.text == ""){
+			splitView.setAttribute('size',this.width);
+		} else if(this.height > this.width){
+			if(parseFloat(this.width) > 32) splitView.setAttribute('size',"32px");
+			else splitView.setAttribute('size',this.width);
+		} else if(this.width >= this.height){
+			splitView.size = "32px";
+		}
+	}
+
+	static get observedAttributes(){
+		return ['symbol','style', 'disabled','placeholder','value'];
+	}
+
+	attributeChangedCallback(name, oldValue, newValue){
+		if(name == "symbol"){
+			this.shadowRoot.getElementById('symbol').setAttribute("symbol",newValue);
+		}
+		if(name == "style"){
+			this.updateSize();
+		}
+		if(name == "disabled"){
+			if(newValue != null) this.shadowRoot.getElementById('text').disabled = true;
+			else this.shadowRoot.getElementById('text').disabled = false;
+		}
+		if(name == 'placeholder'){
+			this.shadowRoot.getElementById('text').placeholder = newValue;
+		}
+		if(name == 'value'){
+			this.shadowRoot.getElementById('text').value = newValue;
+		}
+	}
+
+	get disabled(){
+		return this.hasAttribute('disabled');
+	}
+	set disabled(value){
+		if(value) this.setAttribute('disabled',value);
+		else this.removeAttribute('disabled');
+	}
+	get placeholder(){
+		return this.getAttribute('placeholder');
+	}
+	set placeholder(value){
+		this.setAttribute('placeholder',value);
+	}
+	get value(){
+		return this.getAttribute('value');
+	}
+	set value(value){
+		this.setAttribute('value',value);
 	}
 }
 
@@ -1034,7 +1186,7 @@ class FilterDateItem extends HTMLElement {
                 }
                 ],
             "Attributes":[]
-        }
+        };
         return(about);
     }
 }
@@ -1310,7 +1462,7 @@ class FilterView extends HTMLElement {
                 "Name":"callback",
                 "Description":"Sirve para asignar una función callback al seleccionar un item."
             }]
-        }
+        };
         return(about);
     }
 }
@@ -1530,7 +1682,7 @@ class ListView extends FabsElement {
 					--hover-background: #f2a72e;
 					--element-height: 3em;
 					--element-padding: 1em;
-					overflow: scroll;
+					overflow: auto;
 				}
 				ul{
 					width: 100%;
@@ -1675,6 +1827,126 @@ class ListView extends FabsElement {
 	}
 }
 
+class ActionListView extends FabsElement {
+	constructor() {
+		super();
+		this.about.parentClass = "FabsElement";
+		this.about.description = "Elemento para hacer listas";
+		this.about.createdOn = "2019-09-01";
+		this.about.createdOn = "2020-04-19";
+		this.about.methods.push(new ElementMethod("setContent","array","null","Con este método se le pasa la información a la lista, los argumentos son: ([{'id': (int o string)id, 'name': (string)'text0'},{'id': (int o string)id, 'name': (string)'text1'},...]"));
+		this.about.methods.push(new ElementMethod("setFirstSelected","null","null","Con este método haces que el primer elemento esté elegido y lanze la función asociada al atributo callback"));
+		this.about.events.push(new ElementEvent("itemSelected","object","Devuelve el objecto seleccionado."));
+		this.shadowRoot.innerHTML += `
+			<style>
+				:host{
+					--element-color: black;
+					--selected-color: black;
+					--hover-color: black;
+					--element-background: transparent;
+					--selected-background: #f2a72e;
+					--hover-background: #f2a72e;
+					--element-height: 3em;
+					--element-padding: 1em;
+					overflow: auto;
+				}
+				ul{
+					width: 100%;
+					list-style-type: none;
+				}
+				li{
+					width: calc( 100% - 2 * var(--element-padding) );
+					height: var(--element-height);
+					line-height: var(--element-height);
+					padding: 0 var(--element-padding);
+					background-color: var(--element-background);
+					color: var(--element-color);
+				}
+				fabs-button-symbol{
+					width: 100%;
+					height: 100%;
+				}
+			</style>
+			<ul id="ul"></ul>
+		`;
+	}
+
+	static get observedAttributes(){
+		return ['separator','color','hovercolor','selectedcolor','backgroundcolor','backgroundhover','backgroundselected'];
+	}
+
+	attributeChangedCallback(name, oldValue, newValue){
+		if(this.hasAttribute('separator')){
+			var newStyle = document.createElement('STYLE');
+			newStyle.innerHTML = `
+				li {
+					border-bottom: 1px solid black;
+				}
+			`;
+			this.shadowRoot.appendChild(newStyle);
+		}
+		if(name == "color"){
+			this.shadowRoot.host.style.setProperty('--element-color',newValue);
+		}
+		if(name == "hovercolor"){
+			this.shadowRoot.host.style.setProperty('--hover-color',newValue);
+		}
+		if(name == "selectedcolor"){
+			this.shadowRoot.host.style.setProperty('--selected-color',newValue);
+		}
+		if(name == "backgroundcolor"){
+			this.shadowRoot.host.style.setProperty('--element-background',newValue);
+		}
+		if(name == "backgroundhover"){
+			this.shadowRoot.host.style.setProperty('--hover-background',newValue);
+		}
+		if(name == "backgroundselected"){
+			this.shadowRoot.host.style.setProperty('--selected-background',newValue);
+		}
+	}
+
+	get separator(){
+		return this.hasAttribute('separator');
+	}
+
+	set separator(value){
+		if(value) this.setAttribute('separator','');
+		else this.removeAttribute('separator');
+	}
+
+	setContent(list){
+		var ul = this.shadowRoot.querySelector('#ul');
+		ul.innerHTML = "";
+		list.forEach(item => {
+			const element = document.createElement('LI');
+			const textBox = document.createElement('fabs-button-symbol')
+			textBox.id = item.id;
+			textBox.innerHTML = item.value;
+			textBox.textalign = "start";
+			textBox.symbol = "delete";
+			textBox.addEventListener('symbolClicked', e => {
+				this.dispatchEvent(new CustomEvent('deleteItem',{detail:{id:item.id,value:item.value}}));
+			});
+			element.appendChild(textBox);
+			ul.appendChild(element);
+		});
+	}
+
+	appendContent(item){
+		const element = document.createElement('LI');
+		const textBox = document.createElement('fabs-button-symbol')
+		textBox.id = item.id;
+		textBox.innerHTML = item.value;
+		textBox.textalign = "start";
+		textBox.symbol = "delete";
+		textBox.addEventListener('symbolClicked', e => {
+			this.dispatchEvent(new CustomEvent('deleteItem',{detail:{id:item.id,value:item.value}}));
+		});
+		element.appendChild(textbox);
+		ul.appendChild(element);
+	}
+}
+
 class Navbar extends HTMLElement {
     constructor()
     {
@@ -1765,7 +2037,7 @@ class Navbar extends HTMLElement {
                 "Name":"title",
                 "Description":"Sirve para asignar un título a la barra de navegación."
             }]
-        }
+        };
         return(about);
     }
 }
@@ -1837,8 +2109,7 @@ class PopupView extends FabsElement {
 
 class SplitView extends View {
 
-	constructor()
-	{
+	constructor() {
 		super();
 		this.about.description = "Elemento SplitView, ocupa el 100% del espacio disponible, divide la pantalla en dos y recorta el contenido que se salga.";
 		this.about.createdOn = "2019-09-01";
@@ -2071,7 +2342,6 @@ class TableView extends HTMLElement {
             this.shadowRoot.getElementById('container').style.height = 'auto';
             this.shadowRoot.getElementById('table').style.height = 'auto';
             this.shadowRoot.getElementById('body').style.height = 'auto';
-            console.log(this.shadowRoot);
         }
 		if(name == "color"){
             this.shadowRoot.host.style.setProperty('--element-color',newValue);
@@ -2141,7 +2411,7 @@ class TableView extends HTMLElement {
                 var cellHeader = document.createElement('DIV');
                 cellHeader.innerHTML = col;
                 cellHeader.style.textAlign = "center";
-                cellHeader.style.width = "calc( 100% / "+len+" )"
+                cellHeader.style.width = "calc( 100% / "+len+" )";
                 head.appendChild(cellHeader);
             });
         }
@@ -2216,7 +2486,7 @@ class TableView extends HTMLElement {
                     "description":"En este atributo se almacena la función de llamada para cuando se clicke una fila. Si está definida aparecerá una mano encima de las filas, y si no, una flecha."
                 }
             ]
-        }
+        };
         return(about);
     }
 }
@@ -2655,27 +2925,28 @@ class InputClock extends FabsElement {
 	}
 }
 
-class MasterDetailView extends FabsElement {
+class DetailView extends FabsElement {
 	constructor()
 	{
 		super();
 		this.about.parentClass = "FabsComponent";
 		this.about.createdOn = "2020-04-29";
-		this.about.createdOn = "2020-04-29";
+		this.about.createdOn = "2020-05-01";
 
 		this.shadowRoot.innerHTML += `
-			<style>
-				:host {
-				}
-				::slotted(*){
-				}
-			</style>
-			<slot></slot>
+			<fabs-split-view orientation="horizontal" size="11em" separator>
+				<fabs-list-view id="list" separator></fabs-list-view>
+				<div>
+					<slot></slot>
+				</div>
+			</fabs-split-view>
 		`;
 	}
 
 	connectedCallback(){
-
+		this.shadowRoot.getElementById('list').addEventListener('itemSelected', e => {
+			this.dispatchEvent(new CustomEvent("itemSelected",{detail:e.detail}));
+		});
 	}
 
 	static get observedAttributes(){
@@ -2683,6 +2954,173 @@ class MasterDetailView extends FabsElement {
 	}
 
 	attributeChangedCallback(name, oldValue, newValue){
+	}
+
+	setContent(data){
+		this.shadowRoot.getElementById('list').setContent(data);
+	}
+
+	setFirstSelected(){
+		this.shadowRoot.getElementById('list').setFirstSelected();
+	}
+}
+
+class NewDetailView extends FabsElement {
+	constructor()
+	{
+		super();
+		this.about.parentClass = "FabsComponent";
+		this.about.createdOn = "2020-04-29";
+		this.about.createdOn = "2020-05-01";
+
+		this.shadowRoot.innerHTML += `
+			<fabs-split-view orientation="horizontal" size="11em" separator>
+				<fabs-new-simple-list-view id="list"></fabs-new-simple-list-view>
+				<div>
+					<slot></slot>
+				</div>
+			</fabs-split-view>
+		`;
+	}
+
+	connectedCallback(){
+		this.shadowRoot.getElementById('list').addEventListener('newItem', e => {
+			this.dispatchEvent(new CustomEvent("newItem",{detail:e.detail}));
+		});
+		this.shadowRoot.getElementById('list').addEventListener('itemSelected', e => {
+			this.dispatchEvent(new CustomEvent("itemSelected",{detail:e.detail}));
+		});
+	}
+
+	static get observedAttributes(){
+		return ['placeholder'];
+	}
+
+	attributeChangedCallback(name, oldValue, newValue){
+		if(name == 'placeholder'){
+			this.shadowRoot.getElementById('list').placeholder = newValue;
+		}
+	}
+
+	set placeholder(value){
+		this.setAttribute('placeholder',value);
+	}
+	get placeholder(){
+		this.getAttribute('placeholder');
+	}
+
+	setContent(data){
+		this.shadowRoot.getElementById('list').setContent(data);
+	}
+
+	setFirstSelected(){
+		this.shadowRoot.getElementById('list').setFirstSelected();
+	}
+}
+
+class NewListView extends FabsElement {
+	constructor()
+	{
+		super();
+		this.about.parentClass = "FabsElement";
+		this.about.createdOn = "2020-05-03";
+		this.about.createdOn = "2020-05-03";
+
+		this.shadowRoot.innerHTML += `
+			<fabs-split-view size="3em" separator id="container">
+				<fabs-input-symbol symbol="cross" id="text"></fabs-input-symbol>
+				<fabs-action-list id="list" separator></fabs-action-list>
+			</fabs-split-view>
+		`;
+	}
+
+	connectedCallback(){
+		this.shadowRoot.getElementById('text').addEventListener('symbolAction', e => {
+			this.dispatchEvent(new CustomEvent("newItem",{detail:e.detail}));
+		});
+		this.shadowRoot.getElementById('list').addEventListener('deleteItem', e => {
+			this.dispatchEvent(new CustomEvent("deleteItem",{detail:e.detail}));
+		});
+	}
+
+	static get observedAttributes(){
+		return ['placeholder'];
+	}
+
+	attributeChangedCallback(name, oldValue, newValue){
+		if(name == 'placeholder'){
+			this.shadowRoot.getElementById('text').placeholder = newValue;
+		}
+	}
+
+	set placeholder(value){
+		this.setAttribute('placeholder',value);
+	}
+	get placeholder(){
+		return this.getAttribute('placeholder');
+	}
+
+	setContent(data){
+		this.shadowRoot.getElementById('list').setContent(data);
+	}
+
+	clearInput(){
+		this.shadowRoot.getElementById('text').value = "";
+	}
+}
+
+class NewSimpleListView extends FabsElement {
+	constructor()
+	{
+		super();
+		this.about.parentClass = "FabsElement";
+		this.about.createdOn = "2020-05-03";
+		this.about.createdOn = "2020-05-03";
+
+		this.shadowRoot.innerHTML += `
+			<fabs-split-view size="3em" separator id="container">
+				<fabs-input-symbol symbol="cross" id="text"></fabs-input-symbol>
+				<fabs-list-view id="list" separator></fabs-list-view>
+			</fabs-split-view>
+		`;
+	}
+
+	connectedCallback(){
+		this.shadowRoot.getElementById('text').addEventListener('symbolAction', e => {
+			this.dispatchEvent(new CustomEvent("newItem",{detail:e.detail}));
+		});
+		this.shadowRoot.getElementById('list').addEventListener('itemSelected', e => {
+			this.dispatchEvent(new CustomEvent("itemSelected",{detail:e.detail}));
+		});
+	}
+
+	static get observedAttributes(){
+		return ['placeholder'];
+	}
+
+	attributeChangedCallback(name, oldValue, newValue){
+		if(name == 'placeholder'){
+			this.shadowRoot.getElementById('text').placeholder = newValue;
+		}
+	}
+
+	set placeholder(value){
+		this.setAttribute('placeholder',value);
+	}
+	get placeholder(){
+		return this.getAttribute('placeholder');
+	}
+
+	setContent(data){
+		this.shadowRoot.getElementById('list').setContent(data);
+	}
+
+	setFirstSelected(){
+		this.shadowRoot.getElementById('list').setFirstSelected();
+	}
+
+	clearInput(){
+		this.shadowRoot.getElementById('text').value = "";
 	}
 }
 
@@ -2700,7 +3138,9 @@ customElements.define('fabs-filter-date-item', FilterDateItem);
 customElements.define('fabs-filter-elements-item', FilterElementsItem);
 customElements.define('fabs-filter-view', FilterView);
 customElements.define('fabs-input-text', InputText);
+customElements.define('fabs-input-symbol', InputSymbol);
 customElements.define('fabs-list-view', ListView);
+customElements.define('fabs-action-list', ActionListView);
 customElements.define('fabs-navbar', Navbar);
 customElements.define('fabs-popup-view', PopupView);
 customElements.define('fabs-split-view', SplitView);
@@ -2711,4 +3151,7 @@ customElements.define('fabs-symbol', Symbol);
 customElements.define('fabs-checkbox', CheckBox);
 customElements.define('fabs-circular-checkbox', CircularCheckBox);
 customElements.define('fabs-input-clock', InputClock);
-customElements.define('fabs-master-detail-view', MasterDetailView);
+customElements.define('fabs-detail-view', DetailView);
+customElements.define('fabs-new-detail-view', NewDetailView);
+customElements.define('fabs-new-list-view', NewListView);
+customElements.define('fabs-new-simple-list-view', NewSimpleListView);
