@@ -411,6 +411,14 @@ class Symbol extends FabsElement {
 			</svg>
 		`;
 
+		this.uploadSymbol = `
+			<svg viewbox="0 0 100 100">
+				<rect x="10" y="90" width="80" height="10" fill="#f2a72e" rx="2"></rect>
+				<rect x="30" y="45" width="40" height="35" fill="#f2a72e" rx="2"></rect>
+				<polygon points="10,50 90,50 50,10" fill="#f2a72e" class="symbol"/>
+			</svg>
+		`;
+
 		this.shadowRoot.innerHTML += `
 		<style>
 			#container {
@@ -503,9 +511,76 @@ class Symbol extends FabsElement {
 			case "checkMark":
 				container.innerHTML = this.checkMarkSymbol;
 				break;
+			case "upload":
+				container.innerHTML = this.uploadSymbol;
+				break;
 			default:
 				container.innerHTML = "";
 		}
+	}
+}
+
+class LoadBar extends FabsElement {
+	constructor(){
+		super();
+		this.about.parentClass = "FabsComponent";
+		this.about.createdOn = "2019-09-01";
+		this.about.createdOn = "2020-04-17";
+
+		this.shadowRoot.innerHTML += `
+			<style>
+				:host{
+					cursor:pointer;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+				}
+				#outer {
+					border: 1px solid grey;
+					width: calc( 100% - 2px );
+					height: calc( 100% - 2px );
+					border-radius: 99999px;
+					overflow: hidden;
+				}
+				#inner {
+					background-color: var(--fabs-color);
+					height: 100%;
+					width: 0%;
+
+				}
+			</style>
+			<div id="outer">
+				<div id="inner"></div>
+			</div>
+		`;
+	}
+
+	connectedCallback(){
+    }
+
+	static get observedAttributes(){
+		return ['color','backgroundcolor','size','style','disabled'];
+	}
+
+    attributeChangedCallback(name, oldValue, newValue){
+        if(name == "color"){
+            this.shadowRoot.host.style.setProperty('--element-color',newValue);
+        }
+        if(name == "backgroundcolor"){
+            this.shadowRoot.host.style.setProperty('--background-color',newValue);
+        }
+        if(name == "style"){
+			let size = this.shadowRoot.host.style.getPropertyValue('--triangle-height');
+			let value = Math.floor(3 * this.offsetHeight / 5) + "px";
+			if(size !== value) this.shadowRoot.host.style.setProperty('--triangle-height',value);
+        }
+		if(name == "disabled"){
+			this.shadowRoot.host.style.cursor = "inherit";
+        }
+    }
+
+	setPosition(val){
+		this.shadowRoot.getElementById('inner').style.width = val;
 	}
 }
 
@@ -632,10 +707,11 @@ class Button extends FabsElement {
 	}
 
 	static get observedAttributes(){
-		return [];
+		return ['style'];
 	}
 
 	attributeChangedCallback(name, oldValue, newValue){
+		this.updateSize();
 	}
 }
 
@@ -920,17 +996,23 @@ class CheckBox extends FabsElement {
 			case "on":
 				//console.log("attribute on",newValue,oldValue);
 				if(newValue != null){
-					this.shadowRoot.getElementById('knob').style.left = "calc(100% - 1.2em)";
-					this.shadowRoot.getElementById('container').style.backgroundColor = "#00cc41";
+					this.setOn();
 				} else {
-					this.shadowRoot.getElementById('knob').style.left = "0";
-					this.shadowRoot.getElementById('container').style.backgroundColor = "#CFCFCF";
+					this.setOff();
 				}
 				this.dispatchEvent(new CustomEvent('fabs-change',{detail:this.hasAttribute('on')}));
 				break;
 			default:
 
 		}
+	}
+	setOn(){
+		this.shadowRoot.getElementById('knob').style.left = "calc(100% - 1.2em)";
+		this.shadowRoot.getElementById('container').style.backgroundColor = "#00cc41";
+	}
+	setOff(){
+		this.shadowRoot.getElementById('knob').style.left = "0";
+		this.shadowRoot.getElementById('container').style.backgroundColor = "#CFCFCF";
 	}
 
 	get disabled(){
@@ -2612,7 +2694,7 @@ class ValidatedInput extends FabsElement {
 		input.addEventListener('endEditing', e => {
 			if(this.state == this.states.new){
 				this.setState(this.states.initial)
-				this.oldItem = {value:e.detail.newValue};
+				this.oldItem = this.newItem;
 				this.newItem = {value:e.detail.newValue};
 				this.dispatchEvent(new CustomEvent('newItem',{detail:{oldItem:this.oldItem,newItem:this.newItem}}));
 			} else if (this.state == this.states.selected){
@@ -3013,6 +3095,14 @@ class NewDetailView extends FabsElement {
 		this.shadowRoot.getElementById('list').setContent(data);
 	}
 
+	selectItem(itemId){
+		this.shadowRoot.getElementById('list').selectItem(itemId);
+	}
+
+	clearInput(){
+		this.shadowRoot.getElementById('list').clearInput();
+	}
+
 	setFirstSelected(){
 		this.shadowRoot.getElementById('list').setFirstSelected();
 	}
@@ -3119,6 +3209,10 @@ class NewSimpleListView extends FabsElement {
 		this.shadowRoot.getElementById('list').setFirstSelected();
 	}
 
+	selectItem(itemId){
+		this.shadowRoot.getElementById('list').selectItem(itemId);
+	}
+
 	clearInput(){
 		this.shadowRoot.getElementById('text').value = "";
 	}
@@ -3155,3 +3249,4 @@ customElements.define('fabs-detail-view', DetailView);
 customElements.define('fabs-new-detail-view', NewDetailView);
 customElements.define('fabs-new-list-view', NewListView);
 customElements.define('fabs-new-simple-list-view', NewSimpleListView);
+customElements.define('fabs-loadbar', LoadBar);

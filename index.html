@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>
+		Test
+	</title>
+	<script type="module" src="keyboard.js"></script>
+	<style>
+		*{
+			border: 0;
+			margin: 0;
+			padding: 0;
+			/*cursor: none !important;*/
+		}
+		html, body {
+			width: 100%;
+			height: 100%;
+			position: relative;
+			background-color: yellow;
+		}
+
+	</style>
+</head>
+
+<body>
+	<p>Página de prueba.</p>
+	<input type="email" placeholder="Email" id="email">
+	<fabs-keyboard id="vk"></fabs-keyboard>
+	<script>
+		const email = document.getElementById("email");
+		email.addEventListener("focus",() => {
+			document.getElementById("vk").activate(email);
+		});
+	</script>
+</body>
+
+</html>
