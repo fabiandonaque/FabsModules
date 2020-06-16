@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>
+		Test
+	</title>
+	<style>
+		*{
+			border: 0;
+			margin: 0;
+			padding: 0;
+			/*cursor: none !important;*/
+		}
+		html, body {
+			width: 100%;
+			height: 100%;
+			position: relative;
+			background-color: yellow;
+		}
+
+	</style>
+</head>
+
+<body>
+	<p>Página de prueba.</p>
+	<p id="timeticker"></p>
+	<script>
+		var sockTime = null;
+
+		// Websocket server address.
+		var wsServerAddress = "ws://192.168.50.88:8081";
+
+		window.onload = function() {
+			sockTime = new WebSocket(wsServerAddress + "/ws");
+			sockTime.onmessage = function(e) {
+			  document.getElementById("timeticker").innerHTML = e.data;
+			}
+		};
+	</script>
+</body>
+
+</html>

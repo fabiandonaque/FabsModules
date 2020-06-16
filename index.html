@@ -30,11 +30,21 @@
 	<p>Página de prueba.</p>
 	<input type="email" placeholder="Email" id="email">
 	<fabs-keyboard id="vk"></fabs-keyboard>
+	<button type="button" onclick="setAction()">multipantalla</button>
 	<script>
 		const email = document.getElementById("email");
 		email.addEventListener("focus",() => {
 			document.getElementById("vk").activate(email);
 		});
+		function setAction(){
+			console.log("setAction");
+			var oReq = new XMLHttpRequest();
+			oReq.onload = function(e) {
+				console.log("enviado");
+			}
+			oReq.open("POST", "http://192.168.50.88:8081/action");
+			oReq.send("hola");
+		}
 	</script>
 </body>
 
